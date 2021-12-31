@@ -67,7 +67,7 @@ public final class SCDStore {
         let idEntityValue = castToCVarArg(id)
         
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: entityType))
-        fetchRequest.predicate = NSPredicate(format: "\(idName) == %@", idEntityValue)
+        fetchRequest.predicate = NSPredicate(format: "\(idName) == \(predicateFormatSpecifier(for: idEntityValue))", idEntityValue)
         let managedObject = try managedObjectContext.fetch(fetchRequest).first
         
         return try managedObject.flatMap({ try entities(from: [$0]).first })
@@ -124,7 +124,7 @@ public final class SCDStore {
         }
         
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: type(of: entity)))
-        fetchRequest.predicate = NSPredicate(format: "\(idName) == %@", idEntityValue)
+        fetchRequest.predicate = NSPredicate(format: "\(idName) == \(predicateFormatSpecifier(for: idEntityValue))", idEntityValue)
         
         let fetchedManagedObject = try managedObjectContext.fetch(fetchRequest).first
         
@@ -233,6 +233,14 @@ public final class SCDStore {
         case is UUID: return (value as! UUID).uuidString
         case is URL: return (value as! URL).absoluteString
         default: fatalError("Value of type \(type(of: value)) can't be casted to Codable compatible")
+        }
+    }
+    
+    private func predicateFormatSpecifier(for value: CVarArg) -> String {
+        switch value {
+        case is Int: return "%i"
+        case is Double: return "%f"
+        default: return "%@"
         }
     }
 }
