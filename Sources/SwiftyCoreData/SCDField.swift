@@ -7,25 +7,33 @@
 
 import CoreData
 
-public struct SCDField {
-    let name: String
-    let type: FieldType
-    let isOptional: Bool
+public protocol SCDField {
+    var name: String { get }
+    var isOptional: Bool { get }
+    
+    func optional() -> Self
 }
 
-extension SCDField {
+public struct SCDAttributeField: SCDField {
+    public let name: String
+    public let isOptional: Bool
+    
+    let type: FieldType
+}
+
+extension SCDAttributeField {
     public init(name: String, type: FieldType) {
         self.name = name
         self.type = type
         isOptional = false
     }
     
-    public func optional() -> SCDField {
-        SCDField(name: name, type: type, isOptional: true)
+    public func optional() -> SCDAttributeField {
+        SCDAttributeField(name: name, isOptional: true, type: type)
     }
 }
 
-extension SCDField {
+extension SCDAttributeField {
     public enum FieldType {
         /// Int type
         case integer
@@ -56,5 +64,25 @@ extension SCDField {
             case .url: return .URIAttributeType
             }
         }
+    }
+}
+
+public struct SCDRelationshipField: SCDField {
+    public let name: String
+    public let isOptional: Bool
+    
+    let type: Any.Type
+}
+
+extension SCDRelationshipField {
+    /// type must be SCDEntity or array of SCDEntity
+    public init(name: String, type: Any.Type) {
+        self.name = name
+        self.type = type
+        isOptional = false
+    }
+    
+    public func optional() -> SCDRelationshipField {
+        SCDRelationshipField(name: name, isOptional: true, type: type)
     }
 }
