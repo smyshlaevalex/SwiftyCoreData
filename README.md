@@ -1,8 +1,10 @@
 # SwiftyCoreData
 
-Define types `Int`, `Double`, `String`, `Bool`, `Date`, `Data`, `UUID`, `URL` with `SCDAttributeField`
+Define types `Int`, `Double`, `String`, `Bool`, `Date`, `Data`, `UUID`, `URL` or enums with `SCDAttributeField`
 
-Define inner structs with `SCDRelationshipField`
+Enums should be `RawRepresentable` and comform to `SCDIntegerEnum` or `SCDStringEnum`
+
+Define inner structs with `SCDRelationshipField`, add `.array()` for array of structs
 
 ``` swift
 struct Entry {
@@ -10,11 +12,17 @@ struct Entry {
         let id: UUID
         let iconUrl: URL
     }
+    
+    enum Kind: String, SCDStringEnum {
+        case small
+        case big
+    }
 
     let id: Int
     let title: String
-    let date: Date
+    let date: Date?
     let inner: InnerEntry
+    let kind: Kind
 }
 ```
 
@@ -26,8 +34,9 @@ extension Entry: SCDEntity {
         SCDEntityDescription(id: "id", fields: [
             SCDAttributeField(name: "id", type: .integer),
             SCDAttributeField(name: "title", type: .string),
-            SCDAttributeField(name: "date", type: .date),
-            SCDRelationshipField(name: "inner", type: InnerEntry.self)
+            SCDAttributeField(name: "date", type: .date).optional(),
+            SCDRelationshipField(name: "inner", type: InnerEntry.self),
+            SCDAttributeField(name: "kind", type: .string)
         ])
     }
 }
