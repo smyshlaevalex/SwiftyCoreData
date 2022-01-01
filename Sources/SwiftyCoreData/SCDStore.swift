@@ -31,7 +31,9 @@ public final class SCDStore {
         persistentStoreDescription.url = storeUrl
         
         persistentStoreCoordinator.addPersistentStore(with: persistentStoreDescription) { _, error in
-            print(error)
+            if let error = error {
+                print(error)
+            }
         }
     }
     
@@ -202,7 +204,13 @@ public final class SCDStore {
         
         let innerMirror = Mirror(reflecting: value)
         if innerMirror.displayStyle != .optional || !innerMirror.children.isEmpty {
-            return value
+            if let intEnum = value as? SCDIntegerEnum {
+                return intEnum.intRawValue
+            } else if let stringEnum = value as? SCDStringEnum {
+                return stringEnum.stringRawValue
+            } else {
+                return value
+            }
         } else {
             return nil
         }
