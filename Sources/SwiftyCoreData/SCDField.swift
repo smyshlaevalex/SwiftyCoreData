@@ -71,18 +71,23 @@ public struct SCDRelationshipField: SCDField {
     public let name: String
     public let isOptional: Bool
     
-    let type: Any.Type
+    let isArray: Bool
+    let type: SCDEntity.Type
 }
 
 extension SCDRelationshipField {
-    /// type must be SCDEntity or array of SCDEntity
-    public init(name: String, type: Any.Type) {
+    public init(name: String, type: SCDEntity.Type) {
         self.name = name
         self.type = type
         isOptional = false
+        isArray = false
     }
     
     public func optional() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: true, type: type)
+        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, type: type)
+    }
+    
+    public func array() -> SCDRelationshipField {
+        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, type: type)
     }
 }

@@ -44,23 +44,14 @@ public struct SCDManagedObjectModel {
                     nsRelationshipDescription.isOptional = relationshipField.isOptional
                     nsRelationshipDescription.deleteRule = .cascadeDeleteRule
                     
-                    if let entityType = relationshipField.type as? SCDEntity.Type {
-                        guard let nsDestinationEntityDescription = model.entitiesByName[String(describing: entityType)] else {
-                            fatalError("Couldn't find NSEntityDescription for relationship")
-                        }
-                        
-                        nsRelationshipDescription.destinationEntity = nsDestinationEntityDescription
-                        nsRelationshipDescription.minCount = 1
-                        nsRelationshipDescription.maxCount = 1
-                    } else if let entitiesType = relationshipField.type as? [SCDEntity].Type {
-                        guard let nsDestinationEntityDescription = model.entitiesByName[String(describing: entitiesType.Element)] else {
-                            fatalError("Couldn't find NSEntityDescription for relationship")
-                        }
-                        
-                        nsRelationshipDescription.destinationEntity = nsDestinationEntityDescription
-                        nsRelationshipDescription.minCount = 0
-                        nsRelationshipDescription.maxCount = 0
+                    guard let nsDestinationEntityDescription = model.entitiesByName[String(describing: relationshipField.type)] else {
+                        fatalError("Couldn't find NSEntityDescription for relationship")
                     }
+                    
+                    nsRelationshipDescription.destinationEntity = nsDestinationEntityDescription
+                    
+                    nsRelationshipDescription.minCount = relationshipField.isArray ? 0 : 1
+                    nsRelationshipDescription.maxCount = relationshipField.isArray ? 0 : 1
                     
                     nsEntityDescription.properties.append(nsRelationshipDescription)
                     break
