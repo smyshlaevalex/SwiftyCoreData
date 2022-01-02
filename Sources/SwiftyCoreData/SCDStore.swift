@@ -75,6 +75,18 @@ public final class SCDStore {
         return try managedObject.flatMap({ try entities(from: [$0]).first })
     }
     
+    public func fetch<T: SCDEntity>(entityType: T.Type, format: String, arguments: [Any]) throws -> [T] {
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: entityType))
+        fetchRequest.predicate = NSPredicate(format: format, argumentArray: arguments.map(castToCVarArg(_:)))
+        let managedObjects = try managedObjectContext.fetch(fetchRequest)
+        
+        return try entities(from: managedObjects)
+    }
+    
+    public func fetch<T: SCDEntity>(entityType: T.Type, format: String, _ args: Any...) throws -> [T] {
+        try fetch(entityType: entityType, format: format, arguments: args)
+    }
+    
     public func delete<T: SCDEntity>(entities: [T]) throws {
         guard let entityDescription = model.entityDescription(for: T.self) else {
             throw SCDError.missingEntityDescription
