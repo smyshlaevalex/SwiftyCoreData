@@ -68,10 +68,23 @@ extension SCDAttributeField {
 }
 
 public struct SCDRelationshipField: SCDField {
+    public enum DeleteRule {
+        case noAction
+        case cascadeDelete
+        
+        var nsDeleteRule: NSDeleteRule {
+            switch self {
+            case .noAction: return .noActionDeleteRule
+            case .cascadeDelete: return .cascadeDeleteRule
+            }
+        }
+    }
+    
     public let name: String
     public let isOptional: Bool
     
     let isArray: Bool
+    let deleteRule: DeleteRule
     let type: SCDEntity.Type
 }
 
@@ -81,13 +94,18 @@ extension SCDRelationshipField {
         self.type = type
         isOptional = false
         isArray = false
+        deleteRule = .cascadeDelete
     }
     
     public func optional() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, type: type)
+        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, deleteRule: deleteRule, type: type)
     }
     
     public func array() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, type: type)
+        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, deleteRule: deleteRule, type: type)
+    }
+    
+    public func deleteRule(_ deleteRule: DeleteRule) -> SCDRelationshipField {
+        SCDRelationshipField(name: name, isOptional: isOptional, isArray: isArray, deleteRule: deleteRule, type: type)
     }
 }
