@@ -167,8 +167,7 @@ public final class SCDStore {
             
             let value: Any?
             do {
-                if let attributeField = field as? SCDAttributeField,
-                   attributeField.type == .transformable,
+                if field.type == .transformable,
                    let representation = dictionaryRepresentation?[field.name] {
                     value = try JSONSerialization.data(withJSONObject: representation)
                 } else {
@@ -179,28 +178,7 @@ public final class SCDStore {
                 throw error
             }
             
-            switch field {
-            case is SCDAttributeField:
-                managedObject.setPrimitiveValue(value, forKey: field.name)
-                
-            case is SCDRelationshipField:
-                let dict = dictionaryRepresentation?[field.name] as? [String: Any]
-                
-                if let relationshipEntity = value as? SCDEntity {
-                    let relationshipManagedObject = try saveAndGetManagedObject(entity: relationshipEntity,
-                                                                                dictionaryRepresentation: dict)
-                    managedObject.setPrimitiveValue(relationshipManagedObject, forKey: field.name)
-                } else if let relationshipEntities = value as? [SCDEntity] {
-                    let relationshipManagedObjects = try relationshipEntities.map {
-                        try saveAndGetManagedObject(entity: $0, dictionaryRepresentation: dict)
-                    }
-                    let nsMutableSet = NSMutableSet(array: relationshipManagedObjects)
-                    managedObject.setPrimitiveValue(nsMutableSet, forKey: field.name)
-                }
-                
-            default:
-                fatalError("Incompatible SCDField type")
-            }
+            managedObject.setPrimitiveValue(value, forKey: field.name)
             
             managedObject.didChangeValue(forKey: field.name)
         }
@@ -225,28 +203,11 @@ public final class SCDStore {
             
             let value = managedObject.primitiveValue(forKey: field.name)
             
-            switch field {
-            case let attributeField as SCDAttributeField:
-                if attributeField.type == .transformable,
-                    let data = value as? Data {
-                    dict[field.name] = try JSONSerialization.jsonObject(with: data)
-                } else {
-                    dict[field.name] = value.flatMap(transformToCodable)
-                }
-                
-            case let relationshipField as SCDRelationshipField:
-                guard let entityDescription = model.entityDescription(for: relationshipField.type) else {
-                    throw SCDError.missingEntityDescription
-                }
-                
-                if let relationshipManagedObject = value as? NSManagedObject {
-                    dict[field.name] = try entityDictionary(from: relationshipManagedObject, entityDescription: entityDescription)
-                } else if let relationshipManagedObjects = value as? NSMutableSet {
-                    dict[field.name] = try relationshipManagedObjects.map { try entityDictionary(from: $0 as! NSManagedObject, entityDescription: entityDescription) }
-                }
-                
-            default:
-                fatalError("Incompatible SCDField type")
+            if field.type == .transformable,
+                let data = value as? Data {
+                dict[field.name] = try JSONSerialization.jsonObject(with: data)
+            } else {
+                dict[field.name] = value.flatMap(transformToCodable)
             }
             
             managedObject.didAccessValue(forKey: field.name)

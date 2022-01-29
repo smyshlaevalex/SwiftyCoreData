@@ -7,33 +7,21 @@
 
 import CoreData
 
-public protocol SCDField {
-    var name: String { get }
-    var isOptional: Bool { get }
-    
-    func optional() -> Self
-}
-
-public struct SCDAttributeField: SCDField {
-    public let name: String
-    public let isOptional: Bool
-    
+public struct SCDField {
+    let name: String
     let type: FieldType
+    let isOptional: Bool
 }
 
-extension SCDAttributeField {
-    public init(name: String, type: FieldType) {
+extension SCDField {
+    public init(name: String, type: FieldType, optional: Bool = false) {
         self.name = name
         self.type = type
-        isOptional = false
-    }
-    
-    public func optional() -> SCDAttributeField {
-        SCDAttributeField(name: name, isOptional: true, type: type)
+        isOptional = optional
     }
 }
 
-extension SCDAttributeField {
+extension SCDField {
     public enum FieldType {
         /// Int type
         case integer
@@ -67,30 +55,5 @@ extension SCDAttributeField {
             case .transformable: return .binaryDataAttributeType
             }
         }
-    }
-}
-
-public struct SCDRelationshipField: SCDField {
-    public let name: String
-    public let isOptional: Bool
-    
-    let isArray: Bool
-    let type: SCDEntity.Type
-}
-
-extension SCDRelationshipField {
-    public init(name: String, type: SCDEntity.Type) {
-        self.name = name
-        self.type = type
-        isOptional = false
-        isArray = false
-    }
-    
-    public func optional() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, type: type)
-    }
-    
-    public func array() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, type: type)
     }
 }

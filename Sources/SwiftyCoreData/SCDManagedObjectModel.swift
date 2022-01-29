@@ -29,36 +29,12 @@ public struct SCDManagedObjectModel {
             }
             
             for field in entity.entityDescription.fields {
-                switch field {
-                case let attributeField as SCDAttributeField:
-                    let nsAttributeDescription = NSAttributeDescription()
-                    nsAttributeDescription.name = attributeField.name
-                    nsAttributeDescription.attributeType = attributeField.type.attributeType
-                    nsAttributeDescription.isOptional = attributeField.isOptional
-                    
-                    nsEntityDescription.properties.append(nsAttributeDescription)
-                    
-                case let relationshipField as SCDRelationshipField:
-                    let nsRelationshipDescription = NSRelationshipDescription()
-                    nsRelationshipDescription.name = relationshipField.name
-                    nsRelationshipDescription.isOptional = relationshipField.isOptional
-                    nsRelationshipDescription.deleteRule = .cascadeDeleteRule
-                    
-                    guard let nsDestinationEntityDescription = model.entitiesByName[String(describing: relationshipField.type)] else {
-                        fatalError("Couldn't find NSEntityDescription for relationship")
-                    }
-                    
-                    nsRelationshipDescription.destinationEntity = nsDestinationEntityDescription
-                    
-                    nsRelationshipDescription.minCount = relationshipField.isArray ? 0 : 1
-                    nsRelationshipDescription.maxCount = relationshipField.isArray ? 0 : 1
-                    
-                    nsEntityDescription.properties.append(nsRelationshipDescription)
-                    break
+                let nsAttributeDescription = NSAttributeDescription()
+                nsAttributeDescription.name = field.name
+                nsAttributeDescription.attributeType = field.type.attributeType
+                nsAttributeDescription.isOptional = field.isOptional
                 
-                default:
-                    fatalError("Incompatible SCDField type")
-                }
+                nsEntityDescription.properties.append(nsAttributeDescription)
             }
         }
         
