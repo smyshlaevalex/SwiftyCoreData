@@ -24,7 +24,7 @@ extension Entry: SCDEntity {
     static var entityDescription: SCDEntityDescription {
         SCDEntityDescription(id: "id", fields: [
             SCDAttributeField(name: "id", type: .string),
-            SCDRelationshipField(name: "tags", type: Tag.self).array().deleteRule(.noAction)
+            SCDRelationshipField(name: "tags", type: Tag.self).array()
         ])
     }
 }

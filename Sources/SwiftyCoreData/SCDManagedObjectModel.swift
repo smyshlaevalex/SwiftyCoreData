@@ -42,7 +42,7 @@ public struct SCDManagedObjectModel {
                     let nsRelationshipDescription = NSRelationshipDescription()
                     nsRelationshipDescription.name = relationshipField.name
                     nsRelationshipDescription.isOptional = relationshipField.isOptional
-                    nsRelationshipDescription.deleteRule = relationshipField.deleteRule.nsDeleteRule
+                    nsRelationshipDescription.deleteRule = .cascadeDeleteRule
                     
                     guard let nsDestinationEntityDescription = model.entitiesByName[String(describing: relationshipField.type)] else {
                         fatalError("Couldn't find NSEntityDescription for relationship")

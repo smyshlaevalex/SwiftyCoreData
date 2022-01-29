@@ -9,6 +9,10 @@ public struct SCDEntityDescription {
     public let id: String
     public let fields: [SCDField]
     
+    var hasTransformableFields: Bool {
+        fields.contains(where: { ($0 as? SCDAttributeField)?.type == .transformable })
+    }
+    
     public init(id: String, fields: [SCDField]) {
         self.id = id
         self.fields = fields

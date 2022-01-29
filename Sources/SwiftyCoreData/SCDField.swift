@@ -51,6 +51,8 @@ extension SCDAttributeField {
         case uuid
         /// Url type
         case url
+        /// Any type conforming to Codable protocol, can't use predicate with this type
+        case transformable
         
         var attributeType: NSAttributeType {
             switch self {
@@ -62,29 +64,17 @@ extension SCDAttributeField {
             case .binaryData: return .binaryDataAttributeType
             case .uuid: return .UUIDAttributeType
             case .url: return .URIAttributeType
+            case .transformable: return .binaryDataAttributeType
             }
         }
     }
 }
 
 public struct SCDRelationshipField: SCDField {
-    public enum DeleteRule {
-        case noAction
-        case cascadeDelete
-        
-        var nsDeleteRule: NSDeleteRule {
-            switch self {
-            case .noAction: return .noActionDeleteRule
-            case .cascadeDelete: return .cascadeDeleteRule
-            }
-        }
-    }
-    
     public let name: String
     public let isOptional: Bool
     
     let isArray: Bool
-    let deleteRule: DeleteRule
     let type: SCDEntity.Type
 }
 
@@ -94,18 +84,13 @@ extension SCDRelationshipField {
         self.type = type
         isOptional = false
         isArray = false
-        deleteRule = .cascadeDelete
     }
     
     public func optional() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, deleteRule: deleteRule, type: type)
+        SCDRelationshipField(name: name, isOptional: true, isArray: isArray, type: type)
     }
     
     public func array() -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, deleteRule: deleteRule, type: type)
-    }
-    
-    public func deleteRule(_ deleteRule: DeleteRule) -> SCDRelationshipField {
-        SCDRelationshipField(name: name, isOptional: isOptional, isArray: isArray, deleteRule: deleteRule, type: type)
+        SCDRelationshipField(name: name, isOptional: isOptional, isArray: true, type: type)
     }
 }

@@ -50,14 +50,28 @@ public final class SCDStore {
     }
     
     public func save<T: SCDEntity>(entity: T) throws {
-        try saveAndGetManagedObject(entity: entity)
+        guard let entityDescription = model.entityDescription(for: T.self) else {
+            throw SCDError.missingEntityDescription
+        }
+        
+        if entityDescription.hasTransformableFields {
+            let data = try JSONEncoder().encode(entity)
+            let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            try saveAndGetManagedObject(entity: entity, dictionaryRepresentation: dict)
+        } else {
+            try saveAndGetManagedObject(entity: entity, dictionaryRepresentation: nil)
+        }
     }
     
     public func fetch<T: SCDEntity>(entityType: T.Type) throws -> [T] {
+        guard let entityDescription = model.entityDescription(for: T.self) else {
+            throw SCDError.missingEntityDescription
+        }
+        
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: entityType))
         let managedObjects = try managedObjectContext.fetch(fetchRequest)
         
-        return try entities(from: managedObjects)
+        return try entities(from: managedObjects, entityDescription: entityDescription)
     }
     
     public func fetch<T: SCDEntity>(entityType: T.Type, withId id: Any) throws -> T? {
@@ -72,15 +86,19 @@ public final class SCDStore {
         fetchRequest.predicate = NSPredicate(format: "\(idName) == \(predicateFormatSpecifier(for: idEntityValue))", idEntityValue)
         let managedObject = try managedObjectContext.fetch(fetchRequest).first
         
-        return try managedObject.flatMap({ try entities(from: [$0]).first })
+        return try managedObject.flatMap({ try entities(from: [$0], entityDescription: entityDescription).first })
     }
     
     public func fetch<T: SCDEntity>(entityType: T.Type, format: String, arguments: [Any]) throws -> [T] {
+        guard let entityDescription = model.entityDescription(for: T.self) else {
+            throw SCDError.missingEntityDescription
+        }
+        
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: entityType))
         fetchRequest.predicate = NSPredicate(format: format, argumentArray: arguments.map(castToCVarArg(_:)))
         let managedObjects = try managedObjectContext.fetch(fetchRequest)
         
-        return try entities(from: managedObjects)
+        return try entities(from: managedObjects, entityDescription: entityDescription)
     }
     
     public func fetch<T: SCDEntity>(entityType: T.Type, format: String, _ args: Any...) throws -> [T] {
@@ -123,7 +141,7 @@ public final class SCDStore {
     }
     
     @discardableResult
-    private func saveAndGetManagedObject(entity: SCDEntity) throws -> NSManagedObject  {
+    private func saveAndGetManagedObject(entity: SCDEntity, dictionaryRepresentation: [String: Any]?) throws -> NSManagedObject  {
         guard let entityDescription = model.entityDescription(for: type(of: entity)),
               let nsEntityDescription = managedObjectContext.persistentStoreCoordinator?.managedObjectModel.entitiesByName[String(describing: type(of: entity))] else {
             throw SCDError.missingEntityDescription
@@ -149,7 +167,13 @@ public final class SCDStore {
             
             let value: Any?
             do {
-                value = try valueWithName(field.name, from: mirror)
+                if let attributeField = field as? SCDAttributeField,
+                   attributeField.type == .transformable,
+                   let representation = dictionaryRepresentation?[field.name] {
+                    value = try JSONSerialization.data(withJSONObject: representation)
+                } else {
+                    value = try valueWithName(field.name, from: mirror)
+                }
             } catch {
                 managedObjectContext.reset()
                 throw error
@@ -160,11 +184,16 @@ public final class SCDStore {
                 managedObject.setPrimitiveValue(value, forKey: field.name)
                 
             case is SCDRelationshipField:
+                let dict = dictionaryRepresentation?[field.name] as? [String: Any]
+                
                 if let relationshipEntity = value as? SCDEntity {
-                    let relationshipManagedObject = try saveAndGetManagedObject(entity: relationshipEntity)
+                    let relationshipManagedObject = try saveAndGetManagedObject(entity: relationshipEntity,
+                                                                                dictionaryRepresentation: dict)
                     managedObject.setPrimitiveValue(relationshipManagedObject, forKey: field.name)
                 } else if let relationshipEntities = value as? [SCDEntity] {
-                    let relationshipManagedObjects = try relationshipEntities.map { try saveAndGetManagedObject(entity: $0) }
+                    let relationshipManagedObjects = try relationshipEntities.map {
+                        try saveAndGetManagedObject(entity: $0, dictionaryRepresentation: dict)
+                    }
                     let nsMutableSet = NSMutableSet(array: relationshipManagedObjects)
                     managedObject.setPrimitiveValue(nsMutableSet, forKey: field.name)
                 }
@@ -179,9 +208,9 @@ public final class SCDStore {
         return managedObject
     }
     
-    private func entities<T: SCDEntity>(from managedObjects: [NSManagedObject]) throws -> [T] {
+    private func entities<T: SCDEntity>(from managedObjects: [NSManagedObject], entityDescription: SCDEntityDescription) throws -> [T] {
         try managedObjects.map { managedObject in
-            let dict = try entityDictionary(from: managedObject)
+            let dict = try entityDictionary(from: managedObject, entityDescription: entityDescription)
             let data = try JSONSerialization.data(withJSONObject: dict, options: [])
             let entity = try JSONDecoder().decode(T.self, from: data)
             
@@ -189,21 +218,38 @@ public final class SCDStore {
         }
     }
     
-    private func entityDictionary(from managedObject: NSManagedObject) throws -> [String: Any] {
+    private func entityDictionary(from managedObject: NSManagedObject, entityDescription: SCDEntityDescription) throws -> [String: Any] {
         var dict = [String: Any]()
-        for property in managedObject.entity.properties {
-            managedObject.willAccessValue(forKey: property.name)
+        for field in entityDescription.fields {
+            managedObject.willAccessValue(forKey: field.name)
             
-            let value = managedObject.primitiveValue(forKey: property.name)
-            if let relationshipManagedObject = value as? NSManagedObject {
-                dict[property.name] = try entityDictionary(from: relationshipManagedObject)
-            } else if let relationshipManagedObjects = value as? NSMutableSet {
-                dict[property.name] = try relationshipManagedObjects.map { try entityDictionary(from: $0 as! NSManagedObject) }
-            } else {
-                dict[property.name] = value.flatMap(transformToCodable)
+            let value = managedObject.primitiveValue(forKey: field.name)
+            
+            switch field {
+            case let attributeField as SCDAttributeField:
+                if attributeField.type == .transformable,
+                    let data = value as? Data {
+                    dict[field.name] = try JSONSerialization.jsonObject(with: data)
+                } else {
+                    dict[field.name] = value.flatMap(transformToCodable)
+                }
+                
+            case let relationshipField as SCDRelationshipField:
+                guard let entityDescription = model.entityDescription(for: relationshipField.type) else {
+                    throw SCDError.missingEntityDescription
+                }
+                
+                if let relationshipManagedObject = value as? NSManagedObject {
+                    dict[field.name] = try entityDictionary(from: relationshipManagedObject, entityDescription: entityDescription)
+                } else if let relationshipManagedObjects = value as? NSMutableSet {
+                    dict[field.name] = try relationshipManagedObjects.map { try entityDictionary(from: $0 as! NSManagedObject, entityDescription: entityDescription) }
+                }
+                
+            default:
+                fatalError("Incompatible SCDField type")
             }
             
-            managedObject.didAccessValue(forKey: property.name)
+            managedObject.didAccessValue(forKey: field.name)
         }
         
         return dict
