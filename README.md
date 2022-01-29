@@ -1,14 +1,14 @@
 # SwiftyCoreData
 
-Define types `Int`, `Double`, `String`, `Bool`, `Date`, `Data`, `UUID`, `URL` or enums with `SCDAttributeField`
+Define types `Int`, `Double`, `String`, `Bool`, `Date`, `Data`, `UUID`, `URL` or enums with `SCDField`
 
 Enums should be `RawRepresentable` and comform to `SCDIntegerEnum` or `SCDStringEnum`
 
-Define inner structs with `SCDRelationshipField`, add `.array()` for array of structs
+Define inner structs and arrays with `FieldType.transformable`
 
 ``` swift
 struct Entry {
-    struct InnerEntry {
+    struct InnerEntry: Codable {
         let id: UUID
         let iconUrl: URL
     }
@@ -32,30 +32,21 @@ Add entity description:
 extension Entry: SCDEntity {
     static var entityDescription: SCDEntityDescription {
         SCDEntityDescription(id: "id", fields: [
-            SCDAttributeField(name: "id", type: .integer),
-            SCDAttributeField(name: "title", type: .string),
-            SCDAttributeField(name: "date", type: .date).optional(),
-            SCDRelationshipField(name: "inner", type: InnerEntry.self),
-            SCDAttributeField(name: "kind", type: .string)
-        ])
-    }
-}
-
-extension Entry.InnerEntry: SCDEntity {
-    static var entityDescription: SCDEntityDescription {
-        SCDEntityDescription(id: "id", fields: [
-            SCDAttributeField(name: "id", type: .uuid),
-            SCDAttributeField(name: "iconUrl", type: .url)
+            SCDField(name: "id", type: .integer),
+            SCDField(name: "title", type: .string),
+            SCDField(name: "date", type: .date, optional: true),
+            SCDField(name: "inner", type: .transformable),
+            SCDField(name: "kind", type: .string)
         ])
     }
 }
 ```
 
-Add all entities (including inner entities) to SCDManagedObjectModel:
+Add all entities to SCDManagedObjectModel:
 
 ``` swift
 let store = SCDStore(model: SCDManagedObjectModel(entities: [
-        Entry.self, Entry.InnerEntry.self
+        Entry.self
     ]), name: "Model")
 ```
 
