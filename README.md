@@ -64,3 +64,23 @@ Commit changed afterwards:
 ``` swift
 try store.commit()
 ```
+
+### Observation
+
+Observe entities with `observe<T: SCDEntity>(entityType: T.Type, _ observeHandler: @escaping (Changes<T>) -> Void) throws -> Observation` method
+
+`Changes` contain inserted, updated and deleted entities:
+
+``` swift
+try store.observe(entityType: Entry.self) { changes in
+    print(changes)
+}
+```
+
+## Installation
+
+### Swift Package Manager
+
+```
+https://github.com/smyshlaevalex/SwiftyCoreData.git
+```
