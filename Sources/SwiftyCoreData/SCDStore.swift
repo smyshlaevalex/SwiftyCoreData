@@ -11,6 +11,11 @@ public final class SCDStore {
     private let model: SCDManagedObjectModel
     private let managedObjectContext: NSManagedObjectContext
     
+    private var observerToken: NSObjectProtocol?
+    
+    private var observers: [String: (Notification) -> Void] = [:]
+    private var observeHandlers: [String: Any] = [:]
+    
     public init(model: SCDManagedObjectModel, type: StoreType = .sqLite, name: String) {
         self.model = model
         
@@ -34,6 +39,18 @@ public final class SCDStore {
             if let error = error {
                 print(error)
             }
+        }
+        
+        observerToken = NotificationCenter.default.addObserver(forName: NSManagedObjectContext.didChangeObjectsNotification,
+                                                               object: managedObjectContext,
+                                                               queue: .main) { [weak self] notification in
+            self?.observers.values.forEach { $0(notification) }
+        }
+    }
+    
+    deinit {
+        if let observerToken = observerToken {
+            NotificationCenter.default.removeObserver(observerToken)
         }
     }
     
@@ -122,7 +139,7 @@ public final class SCDStore {
         }
         
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: String(describing: T.self))
-        fetchRequest.predicate = NSPredicate(format: "\(idName) IN %@", ids)
+        fetchRequest.predicate = NSPredicate(format: "\(idName) IN %@", argumentArray: [ids])
         
         let managedObjects = try managedObjectContext.fetch(fetchRequest)
         for managedObject in managedObjects {
@@ -137,6 +154,52 @@ public final class SCDStore {
     public func commit() throws {
         if managedObjectContext.hasChanges {
             try managedObjectContext.save()
+        }
+    }
+    
+    public func observe<T: SCDEntity>(entityType: T.Type, _ observeHandler: @escaping (Changes<T>) -> Void) throws -> Observation {
+        guard let entityDescription = model.entityDescription(for: T.self) else {
+            throw SCDError.missingEntityDescription
+        }
+        
+        let entityName = String(describing: T.self)
+        
+        let id = ProcessInfo.processInfo.globallyUniqueString
+        
+        observeHandlers[id] = observeHandler
+        
+        if observers[entityName] == nil {
+            observers[entityName] = { [weak self] notification in
+                guard let self else { return }
+                
+                let insertedObjects = notification.userInfo?[NSInsertedObjectsKey] as? Set<NSManagedObject> ?? Set()
+                let updatedObjects = notification.userInfo?[NSUpdatedObjectsKey] as? Set<NSManagedObject> ?? Set()
+                let deletedObjects = notification.userInfo?[NSDeletedObjectsKey] as? Set<NSManagedObject> ?? Set()
+                
+                guard let inserted: [T] = try? self.entities(from: Array(insertedObjects), entityDescription: entityDescription, skipOnError: true),
+                      let updated: [T] = try? self.entities(from: Array(updatedObjects), entityDescription: entityDescription, skipOnError: true),
+                      let deleted: [T] = try? self.entities(from: Array(deletedObjects), entityDescription: entityDescription, skipOnError: true) else {
+                    return
+                }
+                
+                let changes = Changes<T>(inserted: inserted, updated: updated, deleted: deleted)
+                
+                for observeHandler in self.observeHandlers.values {
+                    if let observeHandler = observeHandler as? (Changes<T>) -> Void {
+                        observeHandler(changes)
+                    }
+                }
+            }
+        }
+        
+        return Observation { [weak self] in
+            guard let self else { return }
+            
+            self.observeHandlers[id] = nil
+            
+            if !self.observeHandlers.values.contains(where: { $0 is (Changes<T>) -> Void }) {
+                self.observers[entityName] = nil
+            }
         }
     }
     
@@ -186,13 +249,25 @@ public final class SCDStore {
         return managedObject
     }
     
-    private func entities<T: SCDEntity>(from managedObjects: [NSManagedObject], entityDescription: SCDEntityDescription) throws -> [T] {
-        try managedObjects.map { managedObject in
-            let dict = try entityDictionary(from: managedObject, entityDescription: entityDescription)
-            let data = try JSONSerialization.data(withJSONObject: dict, options: [])
-            let entity = try JSONDecoder().decode(T.self, from: data)
-            
-            return entity
+    private func entities<T: SCDEntity>(from managedObjects: [NSManagedObject], entityDescription: SCDEntityDescription, skipOnError: Bool = false) throws -> [T] {
+        if skipOnError {
+            return managedObjects.compactMap { managedObject in
+                guard let dict = try? entityDictionary(from: managedObject, entityDescription: entityDescription),
+                      let data = try? JSONSerialization.data(withJSONObject: dict, options: []),
+                      let entity = try? JSONDecoder().decode(T.self, from: data) else {
+                    return nil
+                }
+                
+                return entity
+            }
+        } else {
+            return try managedObjects.map { managedObject in
+                let dict = try entityDictionary(from: managedObject, entityDescription: entityDescription)
+                let data = try JSONSerialization.data(withJSONObject: dict, options: [])
+                let entity = try JSONDecoder().decode(T.self, from: data)
+                
+                return entity
+            }
         }
     }
     
