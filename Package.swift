@@ -5,19 +5,18 @@ import PackageDescription
 
 let package = Package(
     name: "SwiftyCoreData",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v15), .macCatalyst(.v15)],
     products: [
         .library(
             name: "SwiftyCoreData",
             targets: ["SwiftyCoreData"]),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+    ],
     targets: [
         .target(
             name: "SwiftyCoreData",
-            dependencies: []),
-        .testTarget(
-            name: "SwiftyCoreDataTests",
-            dependencies: ["SwiftyCoreData"]),
+            dependencies: [])
     ]
 )
