@@ -282,7 +282,8 @@ public final class PersistentStore {
         }
     }
     
-    private func commitChangesIfNeeded() {
+    /// Commits changes into CoreData store for persistency if needed.
+    public func commitChangesIfNeeded() {
         if managedObjectContext.hasChanges {
             do {
                 try managedObjectContext.save()

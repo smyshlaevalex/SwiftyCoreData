@@ -49,3 +49,11 @@ try store.delete(records: [todoItem1, todoItem2])
 
 try store.delete(record: indicator)
 ```
+
+After saving or deleting records you can call ``PersistentStore/commitChangesIfNeeded()`` method to commit changes to CoreData store.
+
+This method is automatically called when application enters background, which won't work with swift playgrounds previews, so you'll want to call this method then.
+
+```swift
+store.commitChangesIfNeeded()
+```
