@@ -5,7 +5,7 @@ Package for saving structs in CoreData.
 ## Overview
 
 This package offers a subset of CoreData functionally and is made to be easy to use.
-CoreData works with `NSManagedObject` objects which is a class, while this package works with structs.
+CoreData works with `NSManagedObject` objects, while this package works with structs.
 
 Swift Playgrounds for iPad does not offer an easy way to use CoreData due to inability to create xcdatamodeld files.
 
