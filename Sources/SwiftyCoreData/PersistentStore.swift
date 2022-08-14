@@ -174,7 +174,7 @@ public final class PersistentStore {
     /// - Parameters:
     ///   - recordType: Type of a ``Record``.
     ///   - format: The format string of the predicate.
-    ///   - arguments: The arguments used with predicate, will be automatically casted to ``CVarArg``.
+    ///   - arguments: The arguments used with predicate, will be automatically casted to `CVarArg`.
     /// - Returns: Array of records matching provided type and predicate.
     public func fetch<T: Record>(recordType: T.Type, format: String, arguments: [Any]) throws -> [T] {
         guard let recordDescription = model.recordDescription(for: T.self) else {
@@ -192,7 +192,7 @@ public final class PersistentStore {
     /// - Parameters:
     ///   - recordType: Type of a ``Record``.
     ///   - format: The format string of the predicate.
-    ///   - args: The arguments used with predicate, will be automatically casted to ``CVarArg``.
+    ///   - args: The arguments used with predicate, will be automatically casted to `CVarArg`.
     /// - Returns: Array of records matching provided type and predicate.
     public func fetch<T: Record>(recordType: T.Type, format: String, _ args: Any...) throws -> [T] {
         try fetch(recordType: recordType, format: format, arguments: args)

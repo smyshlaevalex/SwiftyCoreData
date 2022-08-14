@@ -5,12 +5,12 @@
 //  Created by Alexander Smyshlaev on 01.01.2022.
 //
 
-/// All ``Int`` enums must conform to this protocol.
+/// All `Int` enums must conform to this protocol.
 public protocol RecordIntegerEnum: Codable {
     var intRawValue: Int { get }
 }
 
-/// All ``String`` enums must conform to this protocol.
+/// All `String` enums must conform to this protocol.
 public protocol RecordStringEnum: Codable {
     var stringRawValue: String { get }
 }
