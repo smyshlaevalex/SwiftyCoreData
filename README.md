@@ -1,81 +1,19 @@
 # SwiftyCoreData
 
-Define types `Int`, `Double`, `String`, `Bool`, `Date`, `Data`, `UUID`, `URL` or enums with `SCDField`
+Package for saving structs in CoreData.
 
-Enums should be `RawRepresentable` and comform to `SCDIntegerEnum` or `SCDStringEnum`
+## Overview
 
-Define inner structs and arrays with `FieldType.transformable`
+This package offers a subset of CoreData functionally and is made to be easy to use.
+CoreData works with NSManagedObject objects, while this package works with structs.
 
-``` swift
-struct Entry {
-    struct InnerEntry: Codable {
-        let id: UUID
-        let iconUrl: URL
-    }
-    
-    enum Kind: String, SCDStringEnum {
-        case small
-        case big
-    }
+Swift Playgrounds for iPad does not offer an easy way to use CoreData due to inability to create xcdatamodeld files.
 
-    let id: Int
-    let title: String
-    let date: Date?
-    let inner: InnerEntry
-    let kind: Kind
-}
-```
+This package is fully usable and compatible with Swift Playgrounds.
 
-Add entity description:
+## Documentation
 
-``` swift
-extension Entry: SCDEntity {
-    static var entityDescription: SCDEntityDescription {
-        SCDEntityDescription(id: "id", fields: [
-            SCDField(name: "id", type: .integer),
-            SCDField(name: "title", type: .string),
-            SCDField(name: "date", type: .date, optional: true),
-            SCDField(name: "inner", type: .transformable),
-            SCDField(name: "kind", type: .string)
-        ])
-    }
-}
-```
-
-Add all entities to SCDManagedObjectModel:
-
-``` swift
-let store = SCDStore(model: SCDManagedObjectModel(entities: [
-        Entry.self
-    ]), name: "Model")
-```
-
-Save, fetch, delete entities:
-
-``` swift
-try store.save(entity: entry)
-try store.fetch(entityType: Entry.self)
-try store.fetch(entityType: Entry.self, withId: 1)
-try store.delete(entity: entry)
-```
-
-Commit changed afterwards:
-
-``` swift
-try store.commit()
-```
-
-### Observation
-
-Observe entities with `observe<T: SCDEntity>(entityType: T.Type, _ observeHandler: @escaping (Changes<T>) -> Void) throws -> Observation` method
-
-`Changes` contain inserted, updated and deleted entities:
-
-``` swift
-try store.observe(entityType: Entry.self) { changes in
-    print(changes)
-}
-```
+https://smyshlaevalex.github.io/SwiftyCoreData/documentation/swiftycoredata/
 
 ## Installation
 
